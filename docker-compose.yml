@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16
+    container_name: skyrouter-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: skyrouter
+      POSTGRES_PASSWORD: skyrouter
+      POSTGRES_DB: skyrouter
+    ports:
+      - "5432:5432"
+    volumes:
+      - skyrouter-db-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skyrouter -d skyrouter"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: skyrouter-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: skyrouter
+      DB_PASSWORD: skyrouter
+      DB_NAME: skyrouter
+      DB_POOL_MAX: 20
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  skyrouter-db-data:
