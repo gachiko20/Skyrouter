@@ -192,6 +192,11 @@ CREATE TABLE IF NOT EXISTS tiquetes (
     id_agente            UUID,
     estado               VARCHAR(20) NOT NULL DEFAULT 'CONFIRMADO',
     precio_pagado        NUMERIC(10,2) NOT NULL,
+    -- Solo aplica mientras estado = 'PENDIENTE' (HU-02, SCRUM-8): instante en
+    -- que expira el bloqueo temporal de selección si no se confirma el pago.
+    -- La liberación/expiración automática es un job fuera del alcance de
+    -- HU-02; esta columna solo deja la información persistida para ese job.
+    fecha_expiracion     TIMESTAMPTZ,
     fecha_reserva        TIMESTAMPTZ NOT NULL DEFAULT now(),
     fecha_actualizacion  TIMESTAMPTZ NOT NULL DEFAULT now(),
 
@@ -214,7 +219,9 @@ CREATE TABLE IF NOT EXISTS tiquetes (
     CONSTRAINT uq_tiquetes_codigo_reserva UNIQUE (codigo_reserva),
     CONSTRAINT ck_tiquetes_codigo_reserva_formato CHECK (codigo_reserva ~ '^[A-Z0-9]{6}$'),
     CONSTRAINT ck_tiquetes_precio_no_negativo CHECK (precio_pagado >= 0),
-    CONSTRAINT ck_tiquetes_estado CHECK (estado IN ('CONFIRMADO', 'CANCELADO', 'REAGENDADO'))
+    -- 'PENDIENTE' (HU-02, SCRUM-8): bloqueo temporal de selección, previo a
+    -- la confirmación de pago. 'CONFIRMADO': reserva/compra definitiva.
+    CONSTRAINT ck_tiquetes_estado CHECK (estado IN ('PENDIENTE', 'CONFIRMADO', 'CANCELADO', 'REAGENDADO'))
 );
 
 COMMENT ON TABLE tiquetes IS 'Tiquetes emitidos: vínculo entre vuelo, pasajero y asiento, con su estado de reserva.';
@@ -222,9 +229,18 @@ COMMENT ON TABLE tiquetes IS 'Tiquetes emitidos: vínculo entre vuelo, pasajero 
 -- Un mismo asiento no puede tener más de un tiquete activo (no cancelado)
 -- para el mismo vuelo. Es la restricción real que impide el overbooking,
 -- independiente del estado "administrativo" almacenado en asientos.estado.
+-- Al filtrar solo por CANCELADO, esta misma restricción cubre tanto los
+-- bloqueos temporales (PENDIENTE, HU-02) como las reservas confirmadas.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tiquetes_vuelo_asiento_activo
     ON tiquetes (id_vuelo, id_asiento)
     WHERE estado <> 'CANCELADO';
+
+-- Soporta el futuro job de liberación de bloqueos temporales vencidos
+-- (fuera de alcance de HU-02): permite encontrar rápidamente los PENDIENTE
+-- cuya fecha_expiracion ya pasó, sin escanear toda la tabla.
+CREATE INDEX IF NOT EXISTS idx_tiquetes_pendientes_expiracion
+    ON tiquetes (fecha_expiracion)
+    WHERE estado = 'PENDIENTE';
 
 DROP TRIGGER IF EXISTS trg_tiquetes_set_fecha_actualizacion ON tiquetes;
 CREATE TRIGGER trg_tiquetes_set_fecha_actualizacion
