@@ -8,6 +8,8 @@ const vuelosRoutes = require('./infrastructure/routes/vuelosRoutes');
 // (infrastructure/routes), independiente de la reserva definitiva de
 // SCRUM-6 expuesta en ./routes/asientosRoutes.
 const bloqueoTemporalAsientosRoutes = require('./infrastructure/routes/asientosRoutes');
+const tiquetesRoutes = require('./infrastructure/routes/tiquetesRoutes');
+const usuariosRoutes = require('./infrastructure/routes/usuariosRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
@@ -17,6 +19,8 @@ app.use(express.json());
 app.use('/api', asientosRoutes);
 app.use('/api', vuelosRoutes);
 app.use('/api', bloqueoTemporalAsientosRoutes);
+app.use('/api', tiquetesRoutes);
+app.use('/api', usuariosRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
