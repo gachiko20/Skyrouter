@@ -87,7 +87,10 @@ function CheckoutView() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    // Nota: sin `min-h-screen`/fondo propios a propósito — esta vista vive
+    // dentro de `DashboardLayout` -> `<main>`, que ya aporta el alto
+    // completo, el fondo y el padding de la página.
+    <>
       <div className="mx-auto max-w-3xl px-4">
         <h1 className="mb-6 text-2xl font-bold text-slate-800">Finalizar compra</h1>
 
@@ -253,7 +256,7 @@ function CheckoutView() {
       </div>
 
       {error && <ToastAlerta mensaje={error} tipo="error" onCerrar={() => setError(null)} />}
-    </div>
+    </>
   );
 }
 

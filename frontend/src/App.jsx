@@ -1,10 +1,9 @@
 import { Route, Routes } from 'react-router-dom';
-import BookingLayout from './components/Layout/BookingLayout.jsx';
+import DashboardLayout from './components/Dashboard/DashboardLayout.jsx';
 import ListaVuelos from './components/Vuelos/ListaVuelos.jsx';
 import SeleccionAsientosPage from './components/Cabina/SeleccionAsientosPage.jsx';
 import CheckoutView from './components/Checkout/CheckoutView.jsx';
 import BookingSuccessPage from './components/Checkout/BookingSuccessPage.jsx';
-import DashboardLayout from './components/Dashboard/DashboardLayout.jsx';
 import UserProfilePage from './components/Dashboard/UserProfilePage.jsx';
 import FlightHistoryPage from './components/Dashboard/FlightHistoryPage.jsx';
 import { ReservaProvider } from './state/ReservaContext.jsx';
@@ -19,14 +18,14 @@ function App() {
   return (
     <ReservaProvider usuarioIdInicial={USUARIO_ID_DEV}>
       <Routes>
-        <Route element={<BookingLayout />}>
+        {/* `DashboardLayout` envuelve toda la aplicación (sidebar + topbar
+            tipo admin): búsqueda de vuelos, selección de asiento, checkout
+            y éxito viven en el mismo shell que "Mi Perfil"/"Mis Viajes". */}
+        <Route element={<DashboardLayout />}>
           <Route path="/" element={<ListaVuelos />} />
           <Route path="/vuelos/:vueloId/asientos" element={<SeleccionAsientosPage />} />
           <Route path="/checkout" element={<CheckoutView />} />
           <Route path="/success" element={<BookingSuccessPage />} />
-        </Route>
-
-        <Route element={<DashboardLayout />}>
           <Route path="/perfil" element={<UserProfilePage />} />
           <Route path="/mis-viajes" element={<FlightHistoryPage />} />
         </Route>

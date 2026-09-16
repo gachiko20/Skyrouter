@@ -13,9 +13,11 @@ function BookingSuccess({
   onEnviarCorreo = () => console.log('Enviando confirmación por correo...'),
 }) {
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="mx-auto max-w-md px-4">
-        <div className="rounded-xl bg-white p-6 shadow-sm">
+    // Nota: sin `min-h-screen`/fondo propios a propósito — esta vista vive
+    // dentro de `DashboardLayout` -> `<main>`, que ya aporta el alto
+    // completo, el fondo y el padding de la página.
+    <div className="mx-auto max-w-md px-4">
+      <div className="rounded-xl bg-white p-6 shadow-sm">
           <div className="flex flex-col items-center text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <svg
@@ -95,8 +97,8 @@ function BookingSuccess({
           </div>
         </div>
       </div>
-    </div>
   );
 }
+
 
 export default BookingSuccess;
