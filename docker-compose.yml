@@ -36,5 +36,22 @@ services:
     ports:
       - "3000:3000"
 
+  frontend:
+    image: node:20-alpine
+    container_name: skyrouter-frontend
+    restart: unless-stopped
+    working_dir: /app
+    depends_on:
+      - api
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000/api
+    volumes:
+      - ./frontend:/app
+      - skyrouter-frontend-node-modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
 volumes:
   skyrouter-db-data:
+  skyrouter-frontend-node-modules:
