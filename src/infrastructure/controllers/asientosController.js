@@ -2,16 +2,18 @@
 
 /**
  * Capa de Presentación (Infrastructure/HTTP) — traduce HTTP <-> caso de uso
- * para el bloqueo temporal de asientos (HU-02, SCRUM-8). No contiene lógica
- * de negocio ni SQL; solo valida presencia de parámetros y formatea la
- * respuesta.
+ * para asientos: bloqueo temporal (HU-02, SCRUM-8) y consulta del mapa de
+ * asientos de un vuelo. No contiene lógica de negocio ni SQL; solo valida
+ * presencia de parámetros y formatea la respuesta.
  */
 
 const { crearBloquearAsientoUseCase } = require('../../application/useCases/bloquearAsientoUseCase');
+const { crearListarAsientosPorVueloUseCase } = require('../../application/useCases/listarAsientosPorVueloUseCase');
 const asientosRepository = require('../repositories/asientosRepository');
 const { ValidationError } = require('../../errors/AppError');
 
 const bloquearAsientoUseCase = crearBloquearAsientoUseCase({ asientosRepository });
+const listarAsientosPorVueloUseCase = crearListarAsientosPorVueloUseCase({ asientosRepository });
 
 /**
  * POST /api/asientos/bloquear
@@ -51,4 +53,26 @@ async function bloquearAsiento(req, res, next) {
   }
 }
 
-module.exports = { bloquearAsiento };
+/**
+ * GET /api/vuelos/:vueloId/asientos
+ *
+ * 200 OK -> { status, code, data: { asientos: [{ idAsiento, codigoAsiento, fila, columna, clase, estado }] } }
+ * 404    -> el vuelo indicado no existe
+ */
+async function listarAsientosPorVuelo(req, res, next) {
+  try {
+    const { vueloId } = req.params;
+
+    const asientos = await listarAsientosPorVueloUseCase(vueloId);
+
+    return res.status(200).json({
+      status: 'success',
+      code: 200,
+      data: { asientos },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = { bloquearAsiento, listarAsientosPorVuelo };
