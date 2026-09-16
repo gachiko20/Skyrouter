@@ -28,13 +28,33 @@ const formateadorPrecio = new Intl.NumberFormat('es-CO', {
 /**
  * Tarjeta de resultado de búsqueda. Puramente presentacional: recibe el
  * vuelo ya normalizado por `vuelosApi.js` (camelCase) y no conoce nada del
- * backend ni hace llamadas de red.
+ * backend ni hace llamadas de red; al hacer clic solo notifica la
+ * intención de selección vía `onSeleccionar`, igual que `Asiento.jsx` hace
+ * con `onSeleccionar` en el plano de cabina.
  */
-function VueloCard({ vuelo }) {
+function VueloCard({ vuelo, onSeleccionar }) {
   const badge = obtenerBadgeDisponibilidad(vuelo.asientosDisponibles);
 
+  function manejarActivacion() {
+    onSeleccionar?.(vuelo);
+  }
+
+  function manejarTeclado(evento) {
+    if (evento.key === 'Enter' || evento.key === ' ') {
+      evento.preventDefault();
+      manejarActivacion();
+    }
+  }
+
   return (
-    <article className="flex flex-col gap-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100 transition-shadow hover:shadow-md">
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={manejarActivacion}
+      onKeyDown={manejarTeclado}
+      aria-label={`Seleccionar vuelo ${vuelo.numeroVuelo}, ${vuelo.origen} a ${vuelo.destino}`}
+      className="flex cursor-pointer flex-col gap-3 rounded-xl border border-transparent bg-white p-5 shadow-sm ring-1 ring-slate-100 transition-all hover:border-blue-500 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+    >
       <header className="flex items-start justify-between gap-2">
         <div>
           <p className="text-lg font-bold text-slate-800">

@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BuscadorForm from './BuscadorForm.jsx';
 import VueloCard from './VueloCard.jsx';
 import VueloCardSkeleton from './VueloCardSkeleton.jsx';
 import EmptyState from './EmptyState.jsx';
 import { buscarVuelos } from '../../services/vuelosApi.js';
+import { useReserva } from '../../state/ReservaContext.jsx';
 
 const CANTIDAD_SKELETONS = 6;
 
@@ -17,6 +19,19 @@ function ListaVuelos() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [yaBusco, setYaBusco] = useState(false);
+
+  const navigate = useNavigate();
+  const { seleccionarVuelo } = useReserva();
+
+  const manejarSeleccionVuelo = useCallback(
+    (vuelo) => {
+      // Estado global (consumido más adelante por CheckoutView) + state de
+      // navegación como respaldo, por si se recarga la página de destino.
+      seleccionarVuelo(vuelo);
+      navigate(`/vuelos/${vuelo.idVuelo}/asientos`, { state: { vuelo } });
+    },
+    [seleccionarVuelo, navigate]
+  );
 
   const manejarBusqueda = useCallback(async (criterios) => {
     setIsLoading(true);
@@ -59,7 +74,7 @@ function ListaVuelos() {
       {mostrarResultados && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {vuelos.map((vuelo) => (
-            <VueloCard key={vuelo.idVuelo} vuelo={vuelo} />
+            <VueloCard key={vuelo.idVuelo} vuelo={vuelo} onSeleccionar={manejarSeleccionVuelo} />
           ))}
         </div>
       )}
