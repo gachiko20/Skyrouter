@@ -59,8 +59,13 @@ function Leyenda() {
  *
  * `asientosIniciales` es el mapa de asientos del vuelo (id, código, estado)
  * ya resuelto por el padre — este componente no hace fetch por sí mismo.
+ *
+ * `onAsientoBloqueado` (opcional) se invoca con `{ idAsiento, codigoAsiento }`
+ * justo después de un bloqueo exitoso, para que el padre (p. ej. el estado
+ * global de la reserva que consume `CheckoutView`) se entere de la
+ * selección sin que este componente conozca nada de ese consumidor.
  */
-function PlanoCabina({ vueloId, usuarioId, asientosIniciales }) {
+function PlanoCabina({ vueloId, usuarioId, asientosIniciales, onAsientoBloqueado }) {
   const [asientos, setAsientos] = useState(asientosIniciales);
   const [idAsientoEnCurso, setIdAsientoEnCurso] = useState(null);
   const [toast, setToast] = useState(null);
@@ -79,6 +84,7 @@ function PlanoCabina({ vueloId, usuarioId, asientosIniciales }) {
       try {
         await bloquearAsiento({ vueloId, asientoId: asiento.idAsiento, usuarioId });
         actualizarEstadoAsiento(asiento.idAsiento, 'BLOQUEADO_TEMPORAL');
+        onAsientoBloqueado?.({ idAsiento: asiento.idAsiento, codigoAsiento: asiento.codigoAsiento });
       } catch (error) {
         if (error instanceof AsientoNoDisponibleError) {
           // Alguien más lo reservó un instante antes: se refleja como
@@ -91,7 +97,7 @@ function PlanoCabina({ vueloId, usuarioId, asientosIniciales }) {
         setIdAsientoEnCurso(null);
       }
     },
-    [vueloId, usuarioId, actualizarEstadoAsiento]
+    [vueloId, usuarioId, actualizarEstadoAsiento, onAsientoBloqueado]
   );
 
   return (

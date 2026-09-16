@@ -46,4 +46,26 @@ export async function bloquearAsiento({ vueloId, asientoId, usuarioId }) {
   }
 }
 
-export default { bloquearAsiento };
+const MENSAJE_ERROR_LISTAR_ASIENTOS = 'No fue posible cargar el mapa de asientos de este vuelo.';
+
+/**
+ * GET /api/vuelos/:vueloId/asientos.
+ *
+ * @param {string} vueloId
+ * @returns {Promise<object[]>} Asientos del vuelo (camelCase: idAsiento, codigoAsiento, fila, columna, clase, estado).
+ * @throws {Error} Con el mensaje del backend (p. ej. 404 "El vuelo indicado no existe.") o uno genérico de red.
+ */
+export async function listarAsientosPorVuelo(vueloId) {
+  try {
+    const { data } = await httpClient.get(`/vuelos/${vueloId}/asientos`);
+    return data.data.asientos;
+  } catch (error) {
+    const mensaje =
+      error.response?.data?.message ||
+      (error.request ? 'No fue posible conectar con el servidor.' : error.message) ||
+      MENSAJE_ERROR_LISTAR_ASIENTOS;
+    throw new Error(mensaje);
+  }
+}
+
+export default { bloquearAsiento, listarAsientosPorVuelo };
