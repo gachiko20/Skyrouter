@@ -33,6 +33,9 @@ services:
       DB_NAME: skyrouter
       DB_POOL_MAX: 20
       PORT: 3000
+      # SCRUM-49: se lee del archivo .env (no versionado), nunca se escribe aqui.
+      # Generar uno propio: ver .env.example.
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en tu archivo .env}
     ports:
       - "3000:3000"
 
