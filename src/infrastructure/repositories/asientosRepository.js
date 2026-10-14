@@ -34,7 +34,11 @@ const { pool, withTransaction } = require('../../config/database');
 
 const PG_UNIQUE_VIOLATION = '23505';
 const MAX_INTENTOS_CODIGO_RESERVA = 3;
-const MINUTOS_EXPIRACION_BLOQUEO_DEFECTO = 10;
+
+// Configurable por env var (p. ej. para pruebas manuales de la expiración
+// sin recompilar) sin alterar el valor de negocio por defecto si no se
+// define. Ver también `MINUTOS_EXPIRACION_BLOQUEO_ASIENTO` en `.env.example`.
+const MINUTOS_EXPIRACION_BLOQUEO_DEFECTO = Number(process.env.MINUTOS_EXPIRACION_BLOQUEO_ASIENTO) || 15;
 
 const MOTIVO_ASIENTO_NO_ENCONTRADO = 'ASIENTO_NO_ENCONTRADO';
 const MOTIVO_ASIENTO_NO_DISPONIBLE = 'ASIENTO_NO_DISPONIBLE';

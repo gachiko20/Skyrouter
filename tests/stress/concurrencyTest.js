@@ -20,11 +20,25 @@
  *   BASE_URL=http://localhost:3000 node tests/stress/concurrencyTest.js
  */
 
+require('dotenv').config();
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
 const { pool } = require('../../src/config/database');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const CONCURRENCIA = 20;
+
+// SCRUM-49: este endpoint legado ya exige `requireAuth`, así que cada
+// request necesita un Bearer token válido para pasar el middleware. El
+// controlador sigue tomando el `usuarioId` real del body (no del token:
+// ver nota en `src/routes/asientosRoutes.js`), por eso el token firmado
+// aquí solo necesita ser válido, no necesariamente coincidir con el
+// usuario del body. `JWT_SECRET` debe ser el MISMO que usa el servidor
+// contra el que corre esta prueba (local vía .env, o el valor configurado
+// en docker-compose.yml si BASE_URL apunta al contenedor).
+function generarToken(idUsuario) {
+  return jwt.sign({ idUsuario, rol: 'pasajero' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+}
 
 /** Crea avión + vuelo + 1 asiento + 20 usuarios de prueba, aislados por UUID/sufijo aleatorio. */
 async function seedDatosDePrueba() {
@@ -73,7 +87,10 @@ async function dispararReservasConcurrentes(idVuelo, idAsiento, idsUsuarios) {
     axios.post(
       `${BASE_URL}/api/vuelos/${idVuelo}/asientos/${idAsiento}/bloqueo`,
       { usuarioId: idUsuario },
-      { validateStatus: () => true } // No lanzar en 4xx/5xx: se inspeccionan todos los códigos.
+      {
+        headers: { Authorization: `Bearer ${generarToken(idUsuario)}` },
+        validateStatus: () => true, // No lanzar en 4xx/5xx: se inspeccionan todos los códigos.
+      }
     )
   );
   return Promise.all(peticiones);

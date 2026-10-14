@@ -9,6 +9,7 @@
 
 const { crearCheckoutUseCase } = require('../../application/useCases/checkoutUseCase');
 const tiquetesRepository = require('../repositories/tiquetesRepository');
+const { emitirAsientosActualizados } = require('../websocket/socketServer');
 const { ValidationError } = require('../../errors/AppError');
 
 const checkoutUseCase = crearCheckoutUseCase({ tiquetesRepository });
@@ -16,16 +17,22 @@ const checkoutUseCase = crearCheckoutUseCase({ tiquetesRepository });
 /**
  * POST /api/tiquetes/checkout
  * Body: {
- *   vueloId, asientoId, pasajeroId,
+ *   vueloId, asientoId,
  *   datosPasajero: { nombreCompleto, correo, telefono, pasaporte },
  *   datosPago: { numeroTarjeta, fechaExpiracion, cvv, nombreTitular }
  * }
+ * Protegida por `requireAuth` (ver `infrastructure/routes/tiquetesRoutes.js`).
  *
  * `datosPasajero` se recibe y valida (contacto del comprador) pero no se
  * persiste: el esquema actual (`database/init.sql`) vincula el tiquete a un
  * `usuarios` ya existente vía `pasajeroId`, no guarda un snapshot de
- * contacto por tiquete. En un sistema con autenticación real, `pasajeroId`
- * se tomaría de `req.user.id`, no del body.
+ * contacto por tiquete.
+ *
+ * `pasajeroId` SIEMPRE se toma de `req.user.idUsuario` (el JWT verificado),
+ * nunca del body — mismo motivo que `asientosController.bloquearAsiento`:
+ * de lo contrario cualquier cliente autenticado podría pagar/confirmar una
+ * reserva a nombre de OTRO usuario. Completa el TODO que dejó pendiente la
+ * implementación original del checkout antes de que existiera SCRUM-49.
  *
  * 200 OK       -> { status, code, message, data: { tiquete } }
  * 400          -> faltan datos en el body, o datos de tarjeta incompletos
@@ -34,11 +41,12 @@ const checkoutUseCase = crearCheckoutUseCase({ tiquetesRepository });
  */
 async function checkout(req, res, next) {
   try {
-    const { vueloId, asientoId, pasajeroId, datosPasajero, datosPago } = req.body;
+    const { vueloId, asientoId, datosPasajero, datosPago } = req.body;
+    const pasajeroId = req.user.idUsuario;
 
-    if (!vueloId || !asientoId || !pasajeroId || !datosPasajero || !datosPago) {
+    if (!vueloId || !asientoId || !datosPasajero || !datosPago) {
       throw new ValidationError(
-        'vueloId, asientoId, pasajeroId, datosPasajero y datosPago son obligatorios en el body.',
+        'vueloId, asientoId, datosPasajero y datosPago son obligatorios en el body.',
         'DATOS_INCOMPLETOS'
       );
     }
@@ -55,6 +63,10 @@ async function checkout(req, res, next) {
     }
 
     const tiquete = await checkoutUseCase({ vueloId, asientoId, pasajeroId, datosPago });
+
+    // Igual que en `asientosController.bloquearAsiento`: no se espera, para
+    // no demorar la respuesta de pago por la notificación a otros clientes.
+    emitirAsientosActualizados(vueloId);
 
     return res.status(200).json({
       status: 'success',

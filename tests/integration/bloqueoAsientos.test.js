@@ -19,10 +19,19 @@
  */
 
 const request = require('supertest');
+const jwt = require('jsonwebtoken');
 const app = require('../../src/app');
 const { pool } = require('../../src/config/database');
 
 const ENDPOINT = '/api/asientos/bloquear';
+
+// SCRUM-49: el endpoint ahora exige `requireAuth` y el controlador toma
+// `usuarioId` de `req.user.idUsuario` (el JWT), no del body — por eso cada
+// request necesita su propio token firmado con el usuario que se espera
+// que quede como dueño del tiquete.
+function generarToken(idUsuario) {
+  return jwt.sign({ idUsuario, rol: 'pasajero' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+}
 
 async function sembrarVueloConUnAsiento() {
   const avionResult = await pool.query(
@@ -98,7 +107,8 @@ describe('POST /api/asientos/bloquear — concurrencia (HU-02, SCRUM-8)', () => 
 
     const respuesta = await request(app)
       .post(ENDPOINT)
-      .send({ vueloId: idVuelo, asientoId: idAsiento, usuarioId: idUsuarioA });
+      .set('Authorization', `Bearer ${generarToken(idUsuarioA)}`)
+      .send({ vueloId: idVuelo, asientoId: idAsiento });
 
     expect(respuesta.status).toBe(200);
     expect(respuesta.body.data.tiquete).toMatchObject({
@@ -113,8 +123,14 @@ describe('POST /api/asientos/bloquear — concurrencia (HU-02, SCRUM-8)', () => 
     const { idVuelo, idAsiento, idUsuarioA, idUsuarioB } = datos;
 
     const [respuestaA, respuestaB] = await Promise.all([
-      request(app).post(ENDPOINT).send({ vueloId: idVuelo, asientoId: idAsiento, usuarioId: idUsuarioA }),
-      request(app).post(ENDPOINT).send({ vueloId: idVuelo, asientoId: idAsiento, usuarioId: idUsuarioB }),
+      request(app)
+        .post(ENDPOINT)
+        .set('Authorization', `Bearer ${generarToken(idUsuarioA)}`)
+        .send({ vueloId: idVuelo, asientoId: idAsiento }),
+      request(app)
+        .post(ENDPOINT)
+        .set('Authorization', `Bearer ${generarToken(idUsuarioB)}`)
+        .send({ vueloId: idVuelo, asientoId: idAsiento }),
     ]);
 
     const codigos = [respuestaA.status, respuestaB.status].sort();
