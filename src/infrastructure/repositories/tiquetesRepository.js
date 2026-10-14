@@ -21,7 +21,7 @@
  * verificación de tiquetes activos, dentro de una única transacción.
  */
 
-const { withTransaction } = require('../../config/database');
+const { pool, withTransaction } = require('../../config/database');
 
 const PG_UNIQUE_VIOLATION = '23505';
 const MAX_INTENTOS_CODIGO_RESERVA = 3;
@@ -173,8 +173,62 @@ async function confirmarCompra({ vueloId, asientoId, pasajeroId }) {
   });
 }
 
+/**
+ * Datos necesarios para la factura de un tiquete (pasajero, vuelo, asiento
+ * y precio pagado), en una sola consulta. Solo lectura: no requiere
+ * transacción ni locks.
+ *
+ * @param {string} tiqueteId
+ * @returns {Promise<object | null>} `null` si el tiquete no existe.
+ */
+async function obtenerDatosFactura(tiqueteId) {
+  const resultado = await pool.query(
+    `SELECT t.id_tiquete, t.codigo_reserva, t.id_pasajero, t.estado, t.precio_pagado, t.fecha_reserva,
+            u.nombres, u.apellidos, u.correo_electronico, u.documento_identidad,
+            v.numero_vuelo, v.origen, v.destino, v.fecha_hora_salida, v.fecha_hora_llegada,
+            a.codigo_asiento, a.clase
+       FROM tiquetes t
+       JOIN usuarios u ON u.id_usuario = t.id_pasajero
+       JOIN vuelos v   ON v.id_vuelo   = t.id_vuelo
+       JOIN asientos a ON a.id_asiento = t.id_asiento
+      WHERE t.id_tiquete = $1`,
+    [tiqueteId]
+  );
+
+  if (resultado.rowCount === 0) {
+    return null;
+  }
+
+  const fila = resultado.rows[0];
+  return {
+    idTiquete: fila.id_tiquete,
+    codigoReserva: fila.codigo_reserva,
+    idPasajero: fila.id_pasajero,
+    estado: fila.estado,
+    precioPagado: Number(fila.precio_pagado),
+    fechaReserva: fila.fecha_reserva,
+    pasajero: {
+      nombreCompleto: `${fila.nombres} ${fila.apellidos}`,
+      correo: fila.correo_electronico,
+      documentoIdentidad: fila.documento_identidad,
+    },
+    vuelo: {
+      numeroVuelo: fila.numero_vuelo,
+      origen: fila.origen,
+      destino: fila.destino,
+      fechaHoraSalida: fila.fecha_hora_salida,
+      fechaHoraLlegada: fila.fecha_hora_llegada,
+    },
+    asiento: {
+      codigoAsiento: fila.codigo_asiento,
+      clase: fila.clase,
+    },
+  };
+}
+
 module.exports = {
   confirmarCompra,
+  obtenerDatosFactura,
   MOTIVO_ASIENTO_NO_ENCONTRADO,
   MOTIVO_ASIENTO_NO_DISPONIBLE,
   MOTIVO_PASAJERO_NO_ENCONTRADO,
