@@ -36,6 +36,16 @@ VALUES (
 )
 ON CONFLICT (correo_electronico) DO NOTHING;
 
+-- El INSERT anterior es ON CONFLICT DO NOTHING (no pisa filas existentes),
+-- así que este UPDATE separado es el que garantiza, de forma idempotente,
+-- que el usuario dev siempre tenga un hash real y conocido (SCRUM-46,
+-- "Cambiar contraseña" necesita poder validar la contraseña ACTUAL contra
+-- un hash bcrypt válido). Contraseña en texto plano para pruebas locales:
+-- "Skyrouter123".
+UPDATE usuarios
+SET hash_contrasena = '$2a$10$QartGsLbuzaoPpokGIHa3OARDODHm0ZuDlCuyEUOTCd3lJSu00v.C'
+WHERE id_usuario = 'c3000000-0000-0000-0000-000000000001';
+
 -- -----------------------------------------------------------------------------
 -- 1. AVIÓN DE PRUEBA
 -- -----------------------------------------------------------------------------
@@ -61,8 +71,8 @@ VALUES (
     'a1000000-0000-0000-0000-000000000001',
     'BOG',
     'MDE',
-    TIMESTAMPTZ '2026-09-24 08:00:00-05',
-    TIMESTAMPTZ '2026-09-24 08:50:00-05',
+    TIMESTAMPTZ '2026-10-24 08:00:00-05',
+    TIMESTAMPTZ '2026-10-24 08:50:00-05',
     250000
 )
 ON CONFLICT ON CONSTRAINT uq_vuelos_numero_salida DO NOTHING;
@@ -74,8 +84,8 @@ VALUES (
     'a1000000-0000-0000-0000-000000000001',
     'BOG',
     'MDE',
-    TIMESTAMPTZ '2026-09-24 18:30:00-05',
-    TIMESTAMPTZ '2026-09-24 19:20:00-05',
+    TIMESTAMPTZ '2026-10-24 18:30:00-05',
+    TIMESTAMPTZ '2026-10-24 19:20:00-05',
     280000
 )
 ON CONFLICT ON CONSTRAINT uq_vuelos_numero_salida DO NOTHING;

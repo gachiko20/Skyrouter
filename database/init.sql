@@ -194,8 +194,8 @@ CREATE TABLE IF NOT EXISTS tiquetes (
     precio_pagado        NUMERIC(10,2) NOT NULL,
     -- Solo aplica mientras estado = 'PENDIENTE' (HU-02, SCRUM-8): instante en
     -- que expira el bloqueo temporal de selección si no se confirma el pago.
-    -- La liberación/expiración automática es un job fuera del alcance de
-    -- HU-02; esta columna solo deja la información persistida para ese job.
+    -- La liberación automática la hace `expirarBloqueosJob.js` (node-cron,
+    -- cada minuto): pasa el tiquete a 'CANCELADO' y notifica por WebSocket.
     fecha_expiracion     TIMESTAMPTZ,
     fecha_reserva        TIMESTAMPTZ NOT NULL DEFAULT now(),
     fecha_actualizacion  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -235,9 +235,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_tiquetes_vuelo_asiento_activo
     ON tiquetes (id_vuelo, id_asiento)
     WHERE estado <> 'CANCELADO';
 
--- Soporta el futuro job de liberación de bloqueos temporales vencidos
--- (fuera de alcance de HU-02): permite encontrar rápidamente los PENDIENTE
--- cuya fecha_expiracion ya pasó, sin escanear toda la tabla.
+-- Soporta `expirarBloqueosJob.js` (liberación de bloqueos temporales
+-- vencidos): permite encontrar rápidamente los PENDIENTE cuya
+-- fecha_expiracion ya pasó, sin escanear toda la tabla.
 CREATE INDEX IF NOT EXISTS idx_tiquetes_pendientes_expiracion
     ON tiquetes (fecha_expiracion)
     WHERE estado = 'PENDIENTE';

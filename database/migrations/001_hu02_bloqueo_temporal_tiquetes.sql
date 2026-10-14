@@ -14,7 +14,7 @@ ALTER TABLE tiquetes
     ADD COLUMN IF NOT EXISTS fecha_expiracion TIMESTAMPTZ;
 
 COMMENT ON COLUMN tiquetes.fecha_expiracion IS
-    'Solo aplica mientras estado = ''PENDIENTE'' (HU-02): instante en que expira el bloqueo temporal si no se confirma el pago.';
+    'Solo aplica mientras estado = ''PENDIENTE'' (HU-02): instante en que expira el bloqueo temporal si no se confirma el pago. Liberado por expirarBloqueosJob.js (node-cron).';
 
 ALTER TABLE tiquetes DROP CONSTRAINT IF EXISTS ck_tiquetes_estado;
 ALTER TABLE tiquetes
