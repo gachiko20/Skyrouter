@@ -10,6 +10,12 @@ const vuelosRoutes = require('./infrastructure/routes/vuelosRoutes');
 const bloqueoTemporalAsientosRoutes = require('./infrastructure/routes/asientosRoutes');
 const tiquetesRoutes = require('./infrastructure/routes/tiquetesRoutes');
 const usuariosRoutes = require('./infrastructure/routes/usuariosRoutes');
+// SCRUM-49: login/registro. Público a propósito (sin requireAuth): son las
+// únicas rutas por las que un cliente sin JWT todavía puede pasar.
+const authRoutes = require('./infrastructure/routes/authRoutes');
+// SCRUM-10 (Épica 3): gestión de tiquetes por agente/administrador
+// (cancelar, reagendar). Protegida con requireAuth + requireRole.
+const adminRoutes = require('./infrastructure/routes/adminRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
@@ -21,6 +27,8 @@ app.use('/api', vuelosRoutes);
 app.use('/api', bloqueoTemporalAsientosRoutes);
 app.use('/api', tiquetesRoutes);
 app.use('/api', usuariosRoutes);
+app.use('/api', authRoutes);
+app.use('/api', adminRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
