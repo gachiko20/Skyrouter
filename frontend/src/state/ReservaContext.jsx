@@ -10,15 +10,17 @@ const ReservaContext = createContext(null);
  * Se usa Context API (sin librerías externas) porque el proyecto no tiene
  * ninguna instalada (Redux/Zustand) y el estado a compartir es pequeño y de
  * un solo flujo lineal (seleccionar asiento -> pagar).
+ *
+ * El `usuarioId` NO vive aquí (SCRUM-49): ahora es un dato de sesión, no de
+ * la reserva en curso, y vive en `AuthContext` — cualquier componente que lo
+ * necesite debe usar `useAuth()` directamente.
  */
-function ReservaProvider({ children, usuarioIdInicial = null }) {
-  const [usuarioId] = useState(usuarioIdInicial);
+function ReservaProvider({ children }) {
   const [vuelo, setVuelo] = useState(null);
   const [asiento, setAsiento] = useState(null);
 
   const value = useMemo(
     () => ({
-      usuarioId,
       vuelo,
       asiento,
       seleccionarVuelo: setVuelo,
@@ -28,13 +30,13 @@ function ReservaProvider({ children, usuarioIdInicial = null }) {
         setAsiento(null);
       },
     }),
-    [usuarioId, vuelo, asiento]
+    [vuelo, asiento]
   );
 
   return <ReservaContext.Provider value={value}>{children}</ReservaContext.Provider>;
 }
 
-/** @returns {{usuarioId: string|null, vuelo: object|null, asiento: object|null, seleccionarVuelo: Function, seleccionarAsiento: Function, limpiarSeleccion: Function}} */
+/** @returns {{vuelo: object|null, asiento: object|null, seleccionarVuelo: Function, seleccionarAsiento: Function, limpiarSeleccion: Function}} */
 function useReserva() {
   const contexto = useContext(ReservaContext);
   if (!contexto) {

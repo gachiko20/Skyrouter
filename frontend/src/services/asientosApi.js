@@ -1,11 +1,4 @@
-import axios from 'axios';
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-
-const httpClient = axios.create({
-  baseURL: BASE_URL,
-  timeout: 10_000,
-});
+import httpClient from './httpClient.js';
 
 /**
  * Error de negocio específico para un 409 Conflict: el asiento ya fue
@@ -35,14 +28,14 @@ export async function bloquearAsiento({ vueloId, asientoId, usuarioId }) {
     const { data } = await httpClient.post('/asientos/bloquear', { vueloId, asientoId, usuarioId });
     return data.data.tiquete;
   } catch (error) {
-    if (error.response?.status === 409) {
-      throw new AsientoNoDisponibleError(error.response.data?.message || MENSAJE_ASIENTO_TOMADO);
+    // `error` ya es el Error normalizado por el interceptor de
+    // `httpClient.js` (`.status`, no `.response.status`: ese interceptor ya
+    // consumió el error crudo de Axios antes de que llegue aquí).
+    if (error.status === 409) {
+      throw new AsientoNoDisponibleError(error.message || MENSAJE_ASIENTO_TOMADO);
     }
 
-    const mensaje =
-      error.response?.data?.message ||
-      (error.request ? 'No fue posible conectar con el servidor.' : error.message);
-    throw new Error(mensaje);
+    throw error;
   }
 }
 
@@ -60,11 +53,8 @@ export async function listarAsientosPorVuelo(vueloId) {
     const { data } = await httpClient.get(`/vuelos/${vueloId}/asientos`);
     return data.data.asientos;
   } catch (error) {
-    const mensaje =
-      error.response?.data?.message ||
-      (error.request ? 'No fue posible conectar con el servidor.' : error.message) ||
-      MENSAJE_ERROR_LISTAR_ASIENTOS;
-    throw new Error(mensaje);
+    error.message = error.message || MENSAJE_ERROR_LISTAR_ASIENTOS;
+    throw error;
   }
 }
 

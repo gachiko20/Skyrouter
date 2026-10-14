@@ -1,11 +1,4 @@
-import axios from 'axios';
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-
-const httpClient = axios.create({
-  baseURL: BASE_URL,
-  timeout: 10_000,
-});
+import httpClient from './httpClient.js';
 
 const MENSAJE_ERROR_HISTORIAL = 'No fue posible cargar el historial de vuelos.';
 
@@ -24,11 +17,9 @@ export async function obtenerHistorialVuelos(usuarioId) {
     const { data } = await httpClient.get(`/usuarios/${usuarioId}/historial`);
     return data.data.historial;
   } catch (error) {
-    const mensaje =
-      error.response?.data?.message ||
-      (error.request ? 'No fue posible conectar con el servidor.' : error.message) ||
-      MENSAJE_ERROR_HISTORIAL;
-    throw new Error(mensaje);
+    // `error` ya es el Error normalizado por el interceptor de `httpClient.js`.
+    error.message = error.message || MENSAJE_ERROR_HISTORIAL;
+    throw error;
   }
 }
 
