@@ -20,6 +20,7 @@ function BookingSuccessPage() {
 
   return (
     <BookingSuccess
+      idTiquete={state.idTiquete}
       codigoReserva={state.codigoReserva}
       vuelo={state.vuelo}
       ruta={state.ruta}

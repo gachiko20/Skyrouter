@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReserva } from '../../state/ReservaContext.jsx';
+import { useAuth } from '../../state/AuthContext.jsx';
 import { confirmarCheckout } from '../../services/checkoutApi.js';
 import ToastAlerta from '../Cabina/ToastAlerta.jsx';
 
@@ -30,7 +31,9 @@ const formateadorFechaHora = new Intl.DateTimeFormat('es-CO', {
  * y navega a `/success` con los datos del tiquete en el `state` de la ruta.
  */
 function CheckoutView() {
-  const { usuarioId, vuelo, asiento, limpiarSeleccion } = useReserva();
+  const { vuelo, asiento, limpiarSeleccion } = useReserva();
+  const { usuario } = useAuth();
+  const usuarioId = usuario.idUsuario;
   const navigate = useNavigate();
   const [formData, setFormData] = useState(ESTADO_INICIAL);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,6 +74,7 @@ function CheckoutView() {
         },
       });
       const datosExito = {
+        idTiquete: tiquete.idTiquete,
         codigoReserva: tiquete.codigoReserva,
         vuelo: vuelo.numeroVuelo,
         ruta: `${vuelo.origen} - ${vuelo.destino}`,
