@@ -1,17 +1,10 @@
 import { useEffect, useState } from 'react';
 import { obtenerHistorialVuelos } from '../../services/historialApi.js';
+import { useAuth } from '../../state/AuthContext.jsx';
 import HistorialTableSkeleton from './HistorialTableSkeleton.jsx';
 import HistorialEmptyState from './HistorialEmptyState.jsx';
+import DescargarFacturaButton from '../Checkout/DescargarFacturaButton.jsx';
 
-// TODO: reemplazar por el usuario autenticado real cuando exista login
-// (mismo TODO que `USUARIO_ID_DEV` en App.jsx / `USUARIO_DEV` en
-// DashboardLayout.jsx). Se lee directo de la env var en vez de por props o
-// de `ReservaContext` porque esta página no depende del flujo de reserva
-// en curso: es un historial, se debe poder abrir sin haber buscado vuelos.
-const USUARIO_ID_DEV = import.meta.env.VITE_USUARIO_ID_DEV || null;
-
-const MENSAJE_SIN_USUARIO =
-  'No hay un usuario configurado (falta VITE_USUARIO_ID_DEV en frontend/.env).';
 const MENSAJE_ERROR_GENERICO = 'No fue posible cargar el historial de vuelos.';
 
 const formateadorFechaHora = new Intl.DateTimeFormat('es-CO', {
@@ -37,12 +30,17 @@ function EstadoBadge({ estado }) {
 }
 
 /**
- * Ruta `/mis-viajes`, montada dentro de `DashboardLayout`. Consume
- * `GET /api/usuarios/:id/historial` (backend en Clean Architecture:
- * usuariosController -> obtenerHistorialVuelosUseCase -> usuariosRepository,
- * JOIN tiquetes/vuelos/asientos filtrando por `id_pasajero`).
+ * Ruta `/mis-viajes`, montada dentro de `DashboardLayout` (que ya garantiza
+ * sesión activa). Consume `GET /api/usuarios/:id/historial` (backend en
+ * Clean Architecture: usuariosController -> obtenerHistorialVuelosUseCase
+ * -> usuariosRepository, JOIN tiquetes/vuelos/asientos filtrando por
+ * `id_pasajero`), usando el `idUsuario` real de `AuthContext` (SCRUM-49) en
+ * vez del antiguo `VITE_USUARIO_ID_DEV`.
  */
 function FlightHistoryPage() {
+  const { usuario } = useAuth();
+  const usuarioId = usuario.idUsuario;
+
   const [historial, setHistorial] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,16 +48,10 @@ function FlightHistoryPage() {
   useEffect(() => {
     let cancelado = false;
 
-    if (!USUARIO_ID_DEV) {
-      setError(MENSAJE_SIN_USUARIO);
-      setIsLoading(false);
-      return undefined;
-    }
-
     setIsLoading(true);
     setError(null);
 
-    obtenerHistorialVuelos(USUARIO_ID_DEV)
+    obtenerHistorialVuelos(usuarioId)
       .then((resultado) => {
         if (!cancelado) setHistorial(resultado);
       })
@@ -73,7 +65,7 @@ function FlightHistoryPage() {
     return () => {
       cancelado = true;
     };
-  }, []);
+  }, [usuarioId]);
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -142,15 +134,21 @@ function FlightHistoryPage() {
                   <td className="whitespace-nowrap px-4 py-3">
                     <EstadoBadge estado={tiquete.estado} />
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      disabled
-                      title="Disponible próximamente"
-                      className="cursor-not-allowed rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-400"
-                    >
-                      Ver detalle
-                    </button>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      {/* PENDIENTE = bloqueo sin pago: el backend no factura (409). */}
+                      {tiquete.estado !== 'PENDIENTE' && (
+                        <DescargarFacturaButton tiqueteId={tiquete.idTiquete} tamanio="compacto" />
+                      )}
+                      <button
+                        type="button"
+                        disabled
+                        title="Disponible próximamente"
+                        className="cursor-not-allowed rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-400"
+                      >
+                        Ver detalle
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
