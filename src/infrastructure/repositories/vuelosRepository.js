@@ -79,4 +79,31 @@ async function buscarVuelosDisponibles({ origen, destino, fecha }) {
   }));
 }
 
-module.exports = { buscarVuelosDisponibles };
+/**
+ * Días (en hora de Colombia, mismo criterio que `QUERY_BUSCAR_VUELOS`) con
+ * al menos un vuelo futuro no cancelado para la ruta exacta. El mismo
+ * filtro de estado que la búsqueda garantiza que todo día resaltado en el
+ * calendario devuelva resultados al buscarlo. `DISTINCT` colapsa los
+ * varios vuelos de un mismo día; el índice `idx_vuelos_origen_destino_fecha`
+ * cubre el filtro por ruta + fecha.
+ */
+const QUERY_FECHAS_CON_VUELOS = `
+  SELECT DISTINCT to_char(v.fecha_hora_salida AT TIME ZONE 'America/Bogota', 'YYYY-MM-DD') AS fecha
+  FROM vuelos v
+  WHERE v.origen = $1
+    AND v.destino = $2
+    AND v.fecha_hora_salida > now()
+    AND v.estado <> 'CANCELADO'
+  ORDER BY fecha ASC
+`;
+
+/**
+ * @param {{origen: string, destino: string}} ruta  Ya normalizada/validada por el caso de uso.
+ * @returns {Promise<string[]>} Fechas 'YYYY-MM-DD' en orden ascendente.
+ */
+async function obtenerFechasConVuelos({ origen, destino }) {
+  const { rows } = await pool.query(QUERY_FECHAS_CON_VUELOS, [origen, destino]);
+  return rows.map((fila) => fila.fecha);
+}
+
+module.exports = { buscarVuelosDisponibles, obtenerFechasConVuelos };

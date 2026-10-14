@@ -15,13 +15,15 @@ function normalizarCodigoIata(codigo) {
 }
 
 /**
- * Valida y normaliza los criterios de búsqueda de vuelos.
+ * Valida y normaliza solo la ruta (origen/destino): formato IATA y que no
+ * sean el mismo aeropuerto. La comparten la búsqueda por fecha y la
+ * consulta de disponibilidad del calendario.
  *
- * @param {{origen: string, destino: string, fecha: string}} criterios
- * @returns {{origen: string, destino: string, fecha: string}} Criterios normalizados.
+ * @param {{origen: string, destino: string}} ruta
+ * @returns {{origen: string, destino: string}} Ruta normalizada (mayúsculas).
  * @throws {ValidationError}
  */
-function validarBusqueda({ origen, destino, fecha }) {
+function validarRuta({ origen, destino }) {
   const origenNormalizado = normalizarCodigoIata(origen);
   const destinoNormalizado = normalizarCodigoIata(destino);
 
@@ -35,6 +37,19 @@ function validarBusqueda({ origen, destino, fecha }) {
   if (origenNormalizado === destinoNormalizado) {
     throw new ValidationError('El origen y el destino no pueden ser el mismo.', 'ORIGEN_DESTINO_IGUALES');
   }
+
+  return { origen: origenNormalizado, destino: destinoNormalizado };
+}
+
+/**
+ * Valida y normaliza los criterios de búsqueda de vuelos.
+ *
+ * @param {{origen: string, destino: string, fecha: string}} criterios
+ * @returns {{origen: string, destino: string, fecha: string}} Criterios normalizados.
+ * @throws {ValidationError}
+ */
+function validarBusqueda({ origen, destino, fecha }) {
+  const { origen: origenNormalizado, destino: destinoNormalizado } = validarRuta({ origen, destino });
 
   const fechaBusqueda = new Date(`${fecha}T00:00:00`);
   if (Number.isNaN(fechaBusqueda.getTime())) {
@@ -53,4 +68,4 @@ function validarBusqueda({ origen, destino, fecha }) {
   return { origen: origenNormalizado, destino: destinoNormalizado, fecha };
 }
 
-module.exports = { validarBusqueda };
+module.exports = { validarBusqueda, validarRuta };

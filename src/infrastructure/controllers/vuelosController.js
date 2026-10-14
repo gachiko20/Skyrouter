@@ -7,10 +7,14 @@
  */
 
 const { crearBuscarVuelosUseCase } = require('../../application/useCases/buscarVuelosUseCase');
+const {
+  crearObtenerDisponibilidadVuelosUseCase,
+} = require('../../application/useCases/obtenerDisponibilidadVuelosUseCase');
 const vuelosRepository = require('../repositories/vuelosRepository');
 const { ValidationError } = require('../../errors/AppError');
 
 const buscarVuelos = crearBuscarVuelosUseCase({ vuelosRepository });
+const obtenerDisponibilidadVuelos = crearObtenerDisponibilidadVuelosUseCase({ vuelosRepository });
 
 /**
  * GET /api/vuelos?origen=BOG&destino=MDE&fecha=2026-10-01
@@ -44,4 +48,34 @@ async function listarVuelos(req, res, next) {
   }
 }
 
-module.exports = { listarVuelos };
+/**
+ * GET /api/vuelos/disponibilidad?origen=BOG&destino=MDE
+ * Pública (igual que la búsqueda): alimenta el calendario del buscador.
+ *
+ * 200 OK          -> { status, code, data: { fechas: ['2026-10-15', ...] } }
+ * 400 Bad Request -> faltan parámetros, formato IATA inválido u origen = destino
+ */
+async function obtenerDisponibilidad(req, res, next) {
+  try {
+    const { origen, destino } = req.query;
+
+    if (!origen || !destino) {
+      throw new ValidationError(
+        'Los parámetros "origen" y "destino" son obligatorios.',
+        'DATOS_INCOMPLETOS'
+      );
+    }
+
+    const fechas = await obtenerDisponibilidadVuelos({ origen, destino });
+
+    return res.status(200).json({
+      status: 'success',
+      code: 200,
+      data: { fechas },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = { listarVuelos, obtenerDisponibilidad };
