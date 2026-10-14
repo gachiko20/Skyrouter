@@ -1,7 +1,14 @@
-import { Fragment, useCallback, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import Asiento from './Asiento.jsx';
 import ToastAlerta from './ToastAlerta.jsx';
 import { AsientoNoDisponibleError, bloquearAsiento } from '../../services/asientosApi.js';
+import { useAuth } from '../../state/AuthContext.jsx';
+import {
+  conectarSocket,
+  EVENTO_UNIRSE_VUELO,
+  EVENTO_SALIR_VUELO,
+  EVENTO_ASIENTOS_ACTUALIZADOS,
+} from '../../services/socketClient.js';
 
 const CANTIDAD_MINIMA_PARA_PASILLO = 4;
 
@@ -64,13 +71,46 @@ function Leyenda() {
  * justo después de un bloqueo exitoso, para que el padre (p. ej. el estado
  * global de la reserva que consume `CheckoutView`) se entere de la
  * selección sin que este componente conozca nada de ese consumidor.
+ *
+ * También mantiene una conexión de Socket.IO a la sala de este vuelo para
+ * reflejar en vivo los cambios hechos por OTROS usuarios (bloqueo, compra,
+ * o liberación automática por expiración), sin necesidad de recargar.
+ *
+ * `usuarioId` ya no llega por prop (SCRUM-49): se lee directo de
+ * `AuthContext`, la única fuente de verdad para la identidad de sesión.
  */
-function PlanoCabina({ vueloId, usuarioId, asientosIniciales, onAsientoBloqueado }) {
+function PlanoCabina({ vueloId, asientosIniciales, onAsientoBloqueado }) {
+  const { usuario } = useAuth();
+  const usuarioId = usuario.idUsuario;
+
   const [asientos, setAsientos] = useState(asientosIniciales);
   const [idAsientoEnCurso, setIdAsientoEnCurso] = useState(null);
   const [toast, setToast] = useState(null);
 
   const filas = useMemo(() => agruparPorFila(asientos), [asientos]);
+
+  // Sincronización en tiempo real (HU-02): al montar, se conecta al servidor
+  // de WebSockets y se une a la "sala" de este vuelo. Cuando CUALQUIER
+  // cliente (incluido este mismo, como eco) bloquea/compra un asiento, o el
+  // cron de expiración libera uno vencido, el backend reemite el mapa
+  // completo de asientos a esa sala; se reemplaza el estado local entero
+  // (`setAsientos`) en vez de intentar mergear asiento por asiento, para
+  // que la grilla nunca quede desincronizada de la base de datos.
+  useEffect(() => {
+    const socket = conectarSocket();
+
+    socket.emit(EVENTO_UNIRSE_VUELO, vueloId);
+
+    socket.on(EVENTO_ASIENTOS_ACTUALIZADOS, (payload) => {
+      if (payload?.vueloId !== vueloId) return;
+      setAsientos(payload.asientos);
+    });
+
+    return () => {
+      socket.emit(EVENTO_SALIR_VUELO, vueloId);
+      socket.disconnect();
+    };
+  }, [vueloId]);
 
   const actualizarEstadoAsiento = useCallback((idAsiento, nuevoEstado) => {
     setAsientos((actuales) =>

@@ -21,7 +21,7 @@ const formateadorFechaHora = new Intl.DateTimeFormat('es-CO', {
 function SeleccionAsientosPage() {
   const { vueloId } = useParams();
   const navigate = useNavigate();
-  const { usuarioId, vuelo, asiento, seleccionarAsiento } = useReserva();
+  const { vuelo, asiento, seleccionarAsiento } = useReserva();
 
   const [asientos, setAsientos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,7 +95,6 @@ function SeleccionAsientosPage() {
         <>
           <PlanoCabina
             vueloId={vuelo.idVuelo}
-            usuarioId={usuarioId}
             asientosIniciales={asientos}
             onAsientoBloqueado={manejarAsientoBloqueado}
           />

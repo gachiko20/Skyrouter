@@ -20,6 +20,34 @@ jest.mock('../../src/services/asientosApi.js', () => {
   };
 });
 
+// Mismo motivo que el mock de `asientosApi.js` arriba (import.meta.env sin
+// soporte en Jest/Babel): se reemplaza el módulo completo por un socket
+// falso que no emite nada, para que las pruebas no abran una conexión de
+// red real ni dependan del evento `asientos_actualizados` (eso se cubre en
+// las pruebas de integración/manuales del WebSocket, no aquí).
+jest.mock('../../src/services/socketClient.js', () => ({
+  __esModule: true,
+  EVENTO_UNIRSE_VUELO: 'unirse_vuelo',
+  EVENTO_SALIR_VUELO: 'salir_vuelo',
+  EVENTO_ASIENTOS_ACTUALIZADOS: 'asientos_actualizados',
+  conectarSocket: jest.fn(() => ({
+    emit: jest.fn(),
+    on: jest.fn(),
+    disconnect: jest.fn(),
+  })),
+}));
+
+// SCRUM-49: `PlanoCabina` ya no recibe `usuarioId` por prop, lo lee de
+// `AuthContext` (que a su vez depende de `authApi.js`/`httpClient.js`, y
+// esos sí tocan `import.meta.env`). Se mockea el módulo completo para
+// fijar un usuario de prueba sin arrastrar esa cadena de dependencias.
+jest.mock('../../src/state/AuthContext.jsx', () => ({
+  __esModule: true,
+  useAuth: () => ({
+    usuario: { idUsuario: 'usuario-1', nombreCompleto: 'Usuario Uno', rol: 'pasajero' },
+  }),
+}));
+
 const ASIENTOS_INICIALES = [
   { idAsiento: 'asiento-1a', codigoAsiento: '1A', estado: 'DISPONIBLE' },
   { idAsiento: 'asiento-1b', codigoAsiento: '1B', estado: 'DISPONIBLE' },
@@ -32,7 +60,7 @@ describe('PlanoCabina', () => {
   });
 
   it('renderiza cada asiento con su estado inicial (disponible/ocupado)', () => {
-    render(<PlanoCabina vueloId="vuelo-1" usuarioId="usuario-1" asientosIniciales={ASIENTOS_INICIALES} />);
+    render(<PlanoCabina vueloId="vuelo-1" asientosIniciales={ASIENTOS_INICIALES} />);
 
     expect(screen.getByRole('button', { name: /asiento 1a, disponible/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /asiento 1c, ocupado/i })).toBeDisabled();
@@ -42,7 +70,7 @@ describe('PlanoCabina', () => {
     const usuario = userEvent.setup();
     bloquearAsiento.mockResolvedValueOnce({ idTiquete: 't-1', estado: 'PENDIENTE' });
 
-    render(<PlanoCabina vueloId="vuelo-1" usuarioId="usuario-1" asientosIniciales={ASIENTOS_INICIALES} />);
+    render(<PlanoCabina vueloId="vuelo-1" asientosIniciales={ASIENTOS_INICIALES} />);
 
     await usuario.click(screen.getByRole('button', { name: /asiento 1a, disponible/i }));
 
@@ -58,7 +86,7 @@ describe('PlanoCabina', () => {
       new AsientoNoDisponibleError('El asiento ya fue tomado, por favor selecciona otro.')
     );
 
-    render(<PlanoCabina vueloId="vuelo-1" usuarioId="usuario-1" asientosIniciales={ASIENTOS_INICIALES} />);
+    render(<PlanoCabina vueloId="vuelo-1" asientosIniciales={ASIENTOS_INICIALES} />);
 
     await usuario.click(screen.getByRole('button', { name: /asiento 1b, disponible/i }));
 

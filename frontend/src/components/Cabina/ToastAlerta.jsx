@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 const ESTILOS_POR_TIPO = {
   error: 'bg-red-600',
   info: 'bg-slate-800',
+  exito: 'bg-green-600',
 };
 
 const DURACION_MS = 4000;
