@@ -47,7 +47,10 @@ const QUERY_BUSCAR_VUELOS = `
    AND t.estado <> 'CANCELADO'
   WHERE v.origen = $1
     AND v.destino = $2
-    AND v.fecha_hora_salida::date = $3::date
+    -- El día se evalúa en hora de Colombia, no en la zona de la sesión
+    -- (UTC en Docker): sin esto, un vuelo de las 19:00 -05 (00:00 UTC)
+    -- aparecería al buscar el día siguiente.
+    AND (v.fecha_hora_salida AT TIME ZONE 'America/Bogota')::date = $3::date
     AND v.estado <> 'CANCELADO'
   GROUP BY v.id_vuelo, av.id_avion
   ORDER BY v.fecha_hora_salida ASC
