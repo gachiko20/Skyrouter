@@ -71,7 +71,9 @@ function mapearAsientoParaVuelo(fila) {
     estado = 'OCUPADO';
   } else if (fila.estado_tiquete === 'PENDIENTE') {
     estado = 'BLOQUEADO_TEMPORAL';
-  } else if (fila.estado_tiquete === 'CONFIRMADO') {
+  } else if (fila.estado_tiquete === 'CONFIRMADO' || fila.estado_tiquete === 'REAGENDADO') {
+    // REAGENDADO también es un tiquete activo (cuenta en
+    // uq_tiquetes_vuelo_asiento_activo): el asiento está ocupado.
     estado = 'OCUPADO';
   }
 
