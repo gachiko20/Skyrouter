@@ -1,26 +1,4 @@
-import axios from 'axios';
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-
-const httpClient = axios.create({
-  baseURL: BASE_URL,
-  timeout: 10_000,
-});
-
-// Interceptor de respuesta: normaliza cualquier error (HTTP, red o
-// timeout) a una forma única { message, code, status }, para que los
-// componentes no tengan que conocer la forma de los errores de Axios.
-httpClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const mensaje =
-      error.response?.data?.message ||
-      (error.request ? 'No fue posible conectar con el servidor.' : error.message);
-    const codigo = error.response?.data?.errorCode || error.response?.status || 'ERROR_DESCONOCIDO';
-
-    return Promise.reject({ message: mensaje, code: codigo, status: error.response?.status });
-  }
-);
+import httpClient from './httpClient.js';
 
 /**
  * @param {{origen: string, destino: string, fecha: string}} criterios
@@ -29,6 +7,17 @@ httpClient.interceptors.response.use(
 export async function buscarVuelos({ origen, destino, fecha }) {
   const { data } = await httpClient.get('/vuelos', { params: { origen, destino, fecha } });
   return data.data.vuelos;
+}
+
+/**
+ * GET /api/vuelos/disponibilidad — días con al menos un vuelo futuro para la ruta.
+ *
+ * @param {{origen: string, destino: string}} ruta
+ * @returns {Promise<string[]>} Fechas 'YYYY-MM-DD' en orden ascendente.
+ */
+export async function obtenerDisponibilidadVuelos({ origen, destino }) {
+  const { data } = await httpClient.get('/vuelos/disponibilidad', { params: { origen, destino } });
+  return data.data.fechas;
 }
 
 export default httpClient;

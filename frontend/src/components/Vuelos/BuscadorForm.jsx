@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react';
+import CalendarioVuelos from './CalendarioVuelos.jsx';
+import { useDisponibilidadVuelos } from '../../hooks/useDisponibilidadVuelos.js';
 
 /**
  * Formulario de búsqueda de vuelos. Mantiene su propio estado local
- * (origen/destino/fecha) y delega la búsqueda real al padre vía `onBuscar`;
- * no conoce la capa de red (mantiene este componente puramente
- * presentacional y fácil de testear en aislamiento).
+ * (origen/destino/fecha) y delega la búsqueda real al padre vía `onBuscar`.
+ * La única consulta de red propia es la disponibilidad del calendario
+ * (`useDisponibilidadVuelos`), que se dispara sola al completar origen y
+ * destino para resaltar los días con vuelos.
  */
 function BuscadorForm({ onBuscar, isLoading = false }) {
   const [origen, setOrigen] = useState('');
   const [destino, setDestino] = useState('');
   const [fecha, setFecha] = useState('');
+  const disponibilidad = useDisponibilidadVuelos(origen, destino);
 
   const origenNormalizado = origen.trim().toUpperCase();
   const destinoNormalizado = destino.trim().toUpperCase();
@@ -69,13 +73,13 @@ function BuscadorForm({ onBuscar, isLoading = false }) {
         <label htmlFor="fecha" className="text-sm font-medium text-slate-700">
           Fecha
         </label>
-        <input
+        <CalendarioVuelos
           id="fecha"
-          name="fecha"
-          type="date"
           value={fecha}
-          onChange={(evento) => setFecha(evento.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+          onChange={setFecha}
+          fechasConVuelos={disponibilidad.fechas}
+          cargando={disponibilidad.cargando}
+          rutaCompleta={disponibilidad.rutaCompleta}
         />
       </div>
 

@@ -13,8 +13,13 @@ const CANTIDAD_SKELETONS = 6;
  * Orquesta el flujo completo de búsqueda (estado de carga, error y
  * resultados). Es el único componente de esta feature que conoce la capa
  * de red; BuscadorForm y VueloCard permanecen puramente presentacionales.
+ *
+ * `onSeleccionarVuelo` (opcional) reemplaza la acción al elegir un vuelo:
+ * por defecto se guarda en `ReservaContext` y se navega a la selección de
+ * asientos del pasajero; la venta en mostrador (`AdminVentasPage`) lo usa
+ * para quedarse en su propio flujo.
  */
-function ListaVuelos() {
+function ListaVuelos({ onSeleccionarVuelo }) {
   const [vuelos, setVuelos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -25,12 +30,16 @@ function ListaVuelos() {
 
   const manejarSeleccionVuelo = useCallback(
     (vuelo) => {
+      if (onSeleccionarVuelo) {
+        onSeleccionarVuelo(vuelo);
+        return;
+      }
       // Estado global (consumido más adelante por CheckoutView) + state de
       // navegación como respaldo, por si se recarga la página de destino.
       seleccionarVuelo(vuelo);
       navigate(`/vuelos/${vuelo.idVuelo}/asientos`, { state: { vuelo } });
     },
-    [seleccionarVuelo, navigate]
+    [onSeleccionarVuelo, seleccionarVuelo, navigate]
   );
 
   const manejarBusqueda = useCallback(async (criterios) => {
