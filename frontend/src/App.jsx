@@ -6,31 +6,60 @@ import CheckoutView from './components/Checkout/CheckoutView.jsx';
 import BookingSuccessPage from './components/Checkout/BookingSuccessPage.jsx';
 import UserProfilePage from './components/Dashboard/UserProfilePage.jsx';
 import FlightHistoryPage from './components/Dashboard/FlightHistoryPage.jsx';
+import LoginPage from './components/Auth/LoginPage.jsx';
+import ProtectedRoute from './components/Auth/ProtectedRoute.jsx';
+import AdminLayout from './components/Admin/AdminLayout.jsx';
+import AdminDashboardPage from './components/Admin/AdminDashboardPage.jsx';
+import AdminTiquetesPage from './components/Admin/AdminTiquetesPage.jsx';
+import AdminVentasPage from './components/Admin/AdminVentasPage.jsx';
+import { AuthProvider } from './state/AuthContext.jsx';
 import { ReservaProvider } from './state/ReservaContext.jsx';
-
-// TODO: reemplazar por el usuario autenticado real cuando exista login.
-// Sin un sistema de auth, no hay forma de obtener un `usuarioId` real desde
-// el navegador; este valor de desarrollo debe apuntar a un `usuarios.id_usuario`
-// existente en la base de datos para poder bloquear asientos/pagar en local.
-const USUARIO_ID_DEV = import.meta.env.VITE_USUARIO_ID_DEV || null;
+import { ROLES_ADMINISTRATIVOS } from './constants/roles.js';
 
 function App() {
   return (
-    <ReservaProvider usuarioIdInicial={USUARIO_ID_DEV}>
-      <Routes>
-        {/* `DashboardLayout` envuelve toda la aplicación (sidebar + topbar
-            tipo admin): búsqueda de vuelos, selección de asiento, checkout
-            y éxito viven en el mismo shell que "Mi Perfil"/"Mis Viajes". */}
-        <Route element={<DashboardLayout />}>
-          <Route path="/" element={<ListaVuelos />} />
-          <Route path="/vuelos/:vueloId/asientos" element={<SeleccionAsientosPage />} />
-          <Route path="/checkout" element={<CheckoutView />} />
-          <Route path="/success" element={<BookingSuccessPage />} />
-          <Route path="/perfil" element={<UserProfilePage />} />
-          <Route path="/mis-viajes" element={<FlightHistoryPage />} />
-        </Route>
-      </Routes>
-    </ReservaProvider>
+    <AuthProvider>
+      <ReservaProvider>
+        <Routes>
+          {/* Pública: fuera de `DashboardLayout` (sin sidebar/topbar todavía). */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* `DashboardLayout` exige sesión activa (redirige a /login si no
+              hay token, ver su propio código) y envuelve todo lo demás:
+              búsqueda de vuelos, selección de asiento, checkout y éxito
+              viven en el mismo shell que "Mi Perfil"/"Mis Viajes". */}
+          <Route element={<DashboardLayout />}>
+            <Route path="/" element={<ListaVuelos />} />
+            <Route path="/vuelos/:vueloId/asientos" element={<SeleccionAsientosPage />} />
+            <Route path="/checkout" element={<CheckoutView />} />
+            <Route path="/success" element={<BookingSuccessPage />} />
+            <Route path="/perfil" element={<UserProfilePage />} />
+            <Route path="/mis-viajes" element={<FlightHistoryPage />} />
+          </Route>
+
+          {/* Zona administrativa: `ProtectedRoute` exige sesión + rol
+              administrador/agente_comercial (muestra "Acceso denegado" en
+              vez de redirigir en silencio si el rol no alcanza), y
+              `AdminLayout` es el shell visual (sidebar/topbar) para lo que
+              queda adentro.
+
+              El prefijo "/admin" vive SOLO en este nodo externo; las rutas
+              hijas usan paths relativos ("dashboard", "tiquetes"). Con dos
+              niveles de layout route sin `path` propio (`ProtectedRoute` +
+              `AdminLayout`), React Router no resuelve de forma fiable hijos
+              con paths absolutos ("/admin/dashboard") — a diferencia del
+              único nivel de anidación de `DashboardLayout` arriba, donde sí
+              funciona. */}
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={ROLES_ADMINISTRATIVOS} />}>
+            <Route element={<AdminLayout />}>
+              <Route path="dashboard" element={<AdminDashboardPage />} />
+              <Route path="tiquetes" element={<AdminTiquetesPage />} />
+              <Route path="ventas" element={<AdminVentasPage />} />
+            </Route>
+          </Route>
+        </Routes>
+      </ReservaProvider>
+    </AuthProvider>
   );
 }
 
